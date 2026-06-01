@@ -7,6 +7,11 @@ class UserCreate(BaseModel):
     full_name: str
 
 
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
 class UserRead(BaseModel):
     id: int
     email: EmailStr
@@ -15,3 +20,8 @@ class UserRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

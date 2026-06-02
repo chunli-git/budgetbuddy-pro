@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.dependencies import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.database import get_db
 from app.models.user import User
@@ -9,8 +10,18 @@ from app.schemas.user import Token, UserCreate, UserLogin, UserRead
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def validate_password_length(password: str):
+    if len(password.encode("utf-8")) > 72:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be 72 bytes or less",
+        )
+
+
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    validate_password_length(user_data.password)
+
     existing_user = db.query(User).filter(User.email == user_data.email).first()
 
     if existing_user:
@@ -34,6 +45,8 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(user_data: UserLogin, db: Session = Depends(get_db)):
+    validate_password_length(user_data.password)
+
     user = db.query(User).filter(User.email == user_data.email).first()
 
     if not user or not verify_password(user_data.password, user.hashed_password):
@@ -48,3 +61,8 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
         "access_token": access_token,
         "token_type": "bearer",
     }
+
+
+@router.get("/me", response_model=UserRead)
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user

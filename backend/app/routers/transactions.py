@@ -94,3 +94,26 @@ def update_transaction(
     db.refresh(transaction)
 
     return transaction
+
+@router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_transaction(
+    transaction_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    transaction = (
+        db.query(Transaction)
+        .filter(
+            Transaction.id == transaction_id,
+            Transaction.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if transaction is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    db.delete(transaction)
+    db.commit()
+
+    return None

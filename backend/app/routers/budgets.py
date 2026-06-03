@@ -38,3 +38,16 @@ def create_budget(
     db.refresh(budget)
 
     return budget
+
+
+@router.get("/", response_model=list[BudgetRead])
+def get_budgets(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(Budget)
+        .filter(Budget.user_id == current_user.id)
+        .order_by(Budget.period_month.desc())
+        .all()
+    )

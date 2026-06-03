@@ -108,3 +108,26 @@ def update_budget(
     db.refresh(budget)
 
     return budget
+
+@router.delete("/{budget_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_budget(
+    budget_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    budget = (
+        db.query(Budget)
+        .filter(
+            Budget.id == budget_id,
+            Budget.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if budget is None:
+        raise HTTPException(status_code=404, detail="Budget not found")
+
+    db.delete(budget)
+    db.commit()
+
+    return None

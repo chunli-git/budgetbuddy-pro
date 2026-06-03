@@ -43,3 +43,26 @@ def get_transactions(
         .order_by(Transaction.transaction_date.desc())
         .all()
     )
+
+
+@router.get("/{transaction_id}", response_model=TransactionRead)
+def get_transaction(
+    transaction_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    transaction = (
+        db.query(Transaction)
+        .filter(
+            Transaction.id == transaction_id,
+            Transaction.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if transaction is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    return transaction

@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends
@@ -9,9 +10,16 @@ from app.database import get_db
 from app.models.budget import Budget
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.dashboard import BudgetHealthScore
+from app.schemas.dashboard import BudgetHealthScore, SmartAlert
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+
+def get_next_month(month_date: date) -> date:
+    if month_date.month == 12:
+        return date(month_date.year + 1, 1, 1)
+
+    return date(month_date.year, month_date.month + 1, 1)
 
 
 @router.get("/health-score", response_model=BudgetHealthScore)
@@ -85,3 +93,95 @@ def get_budget_health_score(
         "balance": balance,
         "budget_usage_percentage": round(budget_usage_percentage, 2),
     }
+
+
+@router.get("/alerts", response_model=list[SmartAlert])
+def get_smart_alerts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    alerts = []
+
+    total_income = (
+        db.query(func.sum(Transaction.amount))
+        .filter(
+            Transaction.user_id == current_user.id,
+            Transaction.transaction_type == "income",
+        )
+        .scalar()
+        or Decimal("0.00")
+    )
+
+    total_expenses = (
+        db.query(func.sum(Transaction.amount))
+        .filter(
+            Transaction.user_id == current_user.id,
+            Transaction.transaction_type == "expense",
+        )
+        .scalar()
+        or Decimal("0.00")
+    )
+
+    balance = total_income - total_expenses
+
+    if total_income == 0:
+        alerts.append(
+            {
+                "type": "income",
+                "title": "No income recorded",
+                "message": "You have not recorded any income yet.",
+                "severity": "warning",
+            }
+        )
+
+    if balance < 0:
+        alerts.append(
+            {
+                "type": "balance",
+                "title": "Negative balance",
+                "message": "Your expenses are higher than your income.",
+                "severity": "critical",
+            }
+        )
+
+    budgets = db.query(Budget).filter(Budget.user_id == current_user.id).all()
+
+    for budget in budgets:
+        month_start = budget.period_month
+        month_end = get_next_month(month_start)
+
+        spent_amount = (
+            db.query(func.sum(Transaction.amount))
+            .filter(
+                Transaction.user_id == current_user.id,
+                Transaction.category == budget.category,
+                Transaction.transaction_type == "expense",
+                Transaction.transaction_date >= month_start,
+                Transaction.transaction_date < month_end,
+            )
+            .scalar()
+            or Decimal("0.00")
+        )
+
+        percentage_used = float((spent_amount / budget.limit_amount) * 100)
+
+        if percentage_used >= 100:
+            alerts.append(
+                {
+                    "type": "budget",
+                    "title": f"{budget.category} budget exceeded",
+                    "message": f"You have used {round(percentage_used, 2)}% of your budget.",
+                    "severity": "critical",
+                }
+            )
+        elif percentage_used >= 80:
+            alerts.append(
+                {
+                    "type": "budget",
+                    "title": f"{budget.category} budget almost reached",
+                    "message": f"You have used {round(percentage_used, 2)}% of your budget.",
+                    "severity": "warning",
+                }
+            )
+
+    return alerts

@@ -10,3 +10,10 @@ class BudgetHealthScore(BaseModel):
     total_expenses: Decimal
     balance: Decimal
     budget_usage_percentage: float
+
+
+class SmartAlert(BaseModel):
+    type: str
+    title: str
+    message: str
+    severity: str

@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
@@ -47,10 +47,21 @@ def get_transactions(
     category: str | None = Query(default=None),
     start_date: date | None = Query(default=None),
     end_date: date | None = Query(default=None),
+    search: str | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+
+    if search:
+        query = query.filter(
+
+            or_(
+                
+                Transaction.description.ilike(f"%{search}%"),
+                Transaction.category.ilike(f"%{search}%"),
+            )
+        )
 
     if transaction_type:
         query = query.filter(Transaction.transaction_type == transaction_type)

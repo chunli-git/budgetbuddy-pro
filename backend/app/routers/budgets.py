@@ -6,7 +6,7 @@ from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.budget import Budget
 from app.models.user import User
-from app.schemas.budget import BudgetCreate, BudgetRead
+from app.schemas.budget import BudgetCreate, BudgetRead, BudgetUpdate
 
 router = APIRouter(prefix="/budgets", tags=["budgets"])
 
@@ -69,5 +69,42 @@ def get_budget(
 
     if budget is None:
         raise HTTPException(status_code=404, detail="Budget not found")
+
+    return budget
+
+@router.patch("/{budget_id}", response_model=BudgetRead)
+def update_budget(
+    budget_id: int,
+    budget_data: BudgetUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    budget = (
+        db.query(Budget)
+        .filter(
+            Budget.id == budget_id,
+            Budget.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if budget is None:
+        raise HTTPException(status_code=404, detail="Budget not found")
+
+    update_data = budget_data.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(budget, field, value)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Budget already exists for this category and month",
+        )
+
+    db.refresh(budget)
 
     return budget

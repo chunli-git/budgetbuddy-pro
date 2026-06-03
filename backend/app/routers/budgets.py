@@ -51,3 +51,23 @@ def get_budgets(
         .order_by(Budget.period_month.desc())
         .all()
     )
+
+@router.get("/{budget_id}", response_model=BudgetRead)
+def get_budget(
+    budget_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    budget = (
+        db.query(Budget)
+        .filter(
+            Budget.id == budget_id,
+            Budget.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if budget is None:
+        raise HTTPException(status_code=404, detail="Budget not found")
+
+    return budget

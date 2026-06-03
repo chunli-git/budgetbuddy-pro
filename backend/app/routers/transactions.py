@@ -30,3 +30,16 @@ def create_transaction(
     db.refresh(transaction)
 
     return transaction
+
+
+@router.get("/", response_model=list[TransactionRead])
+def get_transactions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(Transaction)
+        .filter(Transaction.user_id == current_user.id)
+        .order_by(Transaction.transaction_date.desc())
+        .all()
+    )

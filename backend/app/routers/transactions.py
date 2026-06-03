@@ -1,6 +1,7 @@
+from datetime import date
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -42,15 +43,28 @@ def create_transaction(
 
 @router.get("/", response_model=list[TransactionRead])
 def get_transactions(
+    transaction_type: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    start_date: date | None = Query(default=None),
+    end_date: date | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return (
-        db.query(Transaction)
-        .filter(Transaction.user_id == current_user.id)
-        .order_by(Transaction.transaction_date.desc())
-        .all()
-    )
+    query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+
+    if transaction_type:
+        query = query.filter(Transaction.transaction_type == transaction_type)
+
+    if category:
+        query = query.filter(Transaction.category == category)
+
+    if start_date:
+        query = query.filter(Transaction.transaction_date >= start_date)
+
+    if end_date:
+        query = query.filter(Transaction.transaction_date <= end_date)
+
+    return query.order_by(Transaction.transaction_date.desc()).all()
 
 
 @router.get("/summary", response_model=TransactionSummary)

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.routers.auth import router as auth_router
 from app.routers.budgets import router as budgets_router
+from app.routers.dashboard import router as dashboard_router
 from app.routers.transactions import router as transactions_router
 
 app = FastAPI(title="BudgetBuddy Pro API")
@@ -12,6 +13,7 @@ app = FastAPI(title="BudgetBuddy Pro API")
 app.include_router(auth_router)
 app.include_router(transactions_router)
 app.include_router(budgets_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/")

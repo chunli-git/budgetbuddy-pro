@@ -33,3 +33,8 @@ class TransactionRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TransactionSummary(BaseModel):
+    total_income: Decimal
+    total_expenses: Decimal
+    balance: Decimal

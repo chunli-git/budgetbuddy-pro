@@ -1,11 +1,19 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.transaction import TransactionCreate, TransactionRead, TransactionUpdate
+from app.schemas.transaction import (
+    TransactionCreate,
+    TransactionRead,
+    TransactionSummary,
+    TransactionUpdate,
+)
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -43,6 +51,38 @@ def get_transactions(
         .order_by(Transaction.transaction_date.desc())
         .all()
     )
+
+
+@router.get("/summary", response_model=TransactionSummary)
+def get_transaction_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    total_income = (
+        db.query(func.sum(Transaction.amount))
+        .filter(
+            Transaction.user_id == current_user.id,
+            Transaction.transaction_type == "income",
+        )
+        .scalar()
+        or Decimal("0.00")
+    )
+
+    total_expenses = (
+        db.query(func.sum(Transaction.amount))
+        .filter(
+            Transaction.user_id == current_user.id,
+            Transaction.transaction_type == "expense",
+        )
+        .scalar()
+        or Decimal("0.00")
+    )
+
+    return {
+        "total_income": total_income,
+        "total_expenses": total_expenses,
+        "balance": total_income - total_expenses,
+    }
 
 
 @router.get("/{transaction_id}", response_model=TransactionRead)
@@ -94,6 +134,7 @@ def update_transaction(
     db.refresh(transaction)
 
     return transaction
+
 
 @router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_transaction(

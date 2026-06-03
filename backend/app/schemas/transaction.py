@@ -13,6 +13,14 @@ class TransactionCreate(BaseModel):
     transaction_date: date
 
 
+class TransactionUpdate(BaseModel):
+    amount: Decimal | None = Field(default=None, gt=0)
+    description: str | None = Field(default=None, min_length=1, max_length=255)
+    category: str | None = Field(default=None, min_length=1, max_length=100)
+    transaction_type: Literal["income", "expense"] | None = None
+    transaction_date: date | None = None
+
+
 class TransactionRead(BaseModel):
     id: int
     amount: Decimal

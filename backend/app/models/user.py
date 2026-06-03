@@ -16,5 +16,11 @@ class User(Base):
     transactions = relationship(
         "Transaction",
         back_populates="user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+    )
+
+    budgets = relationship(
+        "Budget",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )

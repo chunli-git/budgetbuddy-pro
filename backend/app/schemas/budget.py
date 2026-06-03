@@ -26,3 +26,12 @@ class BudgetRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+class BudgetStatus(BaseModel):
+    budget_id: int
+    category: str
+    limit_amount: Decimal
+    spent_amount: Decimal
+    remaining_amount: Decimal
+    percentage_used: float
+    period_month: date

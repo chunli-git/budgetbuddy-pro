@@ -41,3 +41,7 @@ class RecurringTransactionRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+class RecurringTransactionProcessResult(BaseModel):
+    created_transactions: int
+    message: str

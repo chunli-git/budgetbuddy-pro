@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import date, timedelta
 
 from app.core.dependencies import get_current_user
 from app.database import get_db
@@ -9,7 +10,9 @@ from app.schemas.recurring_transaction import (
     RecurringTransactionCreate,
     RecurringTransactionRead,
     RecurringTransactionUpdate,
+    RecurringTransactionProcessResult,
 )
+from app.models.transaction import Transaction
 
 router = APIRouter(prefix="/recurring-transactions", tags=["recurring transactions"])
 
@@ -123,3 +126,66 @@ def delete_recurring_transaction(
     db.commit()
 
     return None
+
+def calculate_next_run_date(current_date: date, frequency: str) -> date:
+    if frequency == "daily":
+        return current_date + timedelta(days=1)
+
+    if frequency == "weekly":
+        return current_date + timedelta(weeks=1)
+
+    if frequency == "monthly":
+        if current_date.month == 12:
+            return date(current_date.year + 1, 1, current_date.day)
+        return date(current_date.year, current_date.month + 1, current_date.day)
+
+    if frequency == "yearly":
+        return date(current_date.year + 1, current_date.month, current_date.day)
+
+    return current_date
+
+
+@router.post("/process-due", response_model=RecurringTransactionProcessResult)
+def process_due_recurring_transactions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    today = date.today()
+
+    due_recurring_transactions = (
+        db.query(RecurringTransaction)
+        .filter(
+            RecurringTransaction.user_id == current_user.id,
+            RecurringTransaction.is_active == True,
+            RecurringTransaction.next_run_date <= today,
+        )
+        .all()
+    )
+
+    created_count = 0
+
+    for recurring_transaction in due_recurring_transactions:
+        transaction = Transaction(
+            amount=recurring_transaction.amount,
+            description=recurring_transaction.description,
+            category=recurring_transaction.category,
+            transaction_type=recurring_transaction.transaction_type,
+            transaction_date=today,
+            user_id=current_user.id,
+        )
+
+        db.add(transaction)
+
+        recurring_transaction.next_run_date = calculate_next_run_date(
+            recurring_transaction.next_run_date,
+            recurring_transaction.frequency,
+        )
+
+        created_count += 1
+
+    db.commit()
+
+    return {
+        "created_transactions": created_count,
+        "message": f"{created_count} recurring transaction(s) processed",
+    }

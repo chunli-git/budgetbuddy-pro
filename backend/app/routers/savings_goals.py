@@ -94,3 +94,28 @@ def update_savings_goal(
     db.refresh(goal)
 
     return goal
+
+@router.delete("/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_savings_goal(
+    goal_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    goal = (
+        db.query(SavingsGoal)
+        .filter(
+            SavingsGoal.id == goal_id,
+            SavingsGoal.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if goal is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Savings goal not found")
+
+    db.delete(goal)
+    db.commit()
+
+    return None

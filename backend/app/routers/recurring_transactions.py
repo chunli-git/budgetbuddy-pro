@@ -48,3 +48,25 @@ def get_recurring_transactions(
         .order_by(RecurringTransaction.created_at.desc())
         .all()
     )
+
+@router.get("/{recurring_id}", response_model=RecurringTransactionRead)
+def get_recurring_transaction(
+    recurring_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    recurring_transaction = (
+        db.query(RecurringTransaction)
+        .filter(
+            RecurringTransaction.id == recurring_id,
+            RecurringTransaction.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if recurring_transaction is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Recurring transaction not found")
+
+    return recurring_transaction

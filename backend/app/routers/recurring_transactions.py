@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
@@ -8,6 +8,7 @@ from app.models.user import User
 from app.schemas.recurring_transaction import (
     RecurringTransactionCreate,
     RecurringTransactionRead,
+    RecurringTransactionUpdate,
 )
 
 router = APIRouter(prefix="/recurring-transactions", tags=["recurring transactions"])
@@ -68,5 +69,34 @@ def get_recurring_transaction(
         from fastapi import HTTPException
 
         raise HTTPException(status_code=404, detail="Recurring transaction not found")
+
+    return recurring_transaction
+
+@router.patch("/{recurring_id}", response_model=RecurringTransactionRead)
+def update_recurring_transaction(
+    recurring_id: int,
+    recurring_data: RecurringTransactionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    recurring_transaction = (
+        db.query(RecurringTransaction)
+        .filter(
+            RecurringTransaction.id == recurring_id,
+            RecurringTransaction.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if recurring_transaction is None:
+        raise HTTPException(status_code=404, detail="Recurring transaction not found")
+
+    update_data = recurring_data.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(recurring_transaction, field, value)
+
+    db.commit()
+    db.refresh(recurring_transaction)
 
     return recurring_transaction

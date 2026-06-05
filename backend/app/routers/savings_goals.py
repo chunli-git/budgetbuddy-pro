@@ -5,8 +5,7 @@ from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.savings_goal import SavingsGoal
 from app.models.user import User
-from app.schemas.savings_goal import SavingsGoalCreate, SavingsGoalRead
-
+from app.schemas.savings_goal import SavingsGoalCreate, SavingsGoalRead, SavingsGoalUpdate
 router = APIRouter(prefix="/savings-goals", tags=["savings goals"])
 
 
@@ -62,5 +61,36 @@ def get_savings_goal(
         from fastapi import HTTPException
 
         raise HTTPException(status_code=404, detail="Savings goal not found")
+
+    return goal
+
+@router.patch("/{goal_id}", response_model=SavingsGoalRead)
+def update_savings_goal(
+    goal_id: int,
+    goal_data: SavingsGoalUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    goal = (
+        db.query(SavingsGoal)
+        .filter(
+            SavingsGoal.id == goal_id,
+            SavingsGoal.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if goal is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Savings goal not found")
+
+    update_data = goal_data.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(goal, field, value)
+
+    db.commit()
+    db.refresh(goal)
 
     return goal

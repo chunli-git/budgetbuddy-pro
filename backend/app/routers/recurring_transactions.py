@@ -100,3 +100,26 @@ def update_recurring_transaction(
     db.refresh(recurring_transaction)
 
     return recurring_transaction
+
+@router.delete("/{recurring_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_recurring_transaction(
+    recurring_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    recurring_transaction = (
+        db.query(RecurringTransaction)
+        .filter(
+            RecurringTransaction.id == recurring_id,
+            RecurringTransaction.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if recurring_transaction is None:
+        raise HTTPException(status_code=404, detail="Recurring transaction not found")
+
+    db.delete(recurring_transaction)
+    db.commit()
+
+    return None

@@ -42,3 +42,25 @@ def get_savings_goals(
         .order_by(SavingsGoal.created_at.desc())
         .all()
     )
+
+@router.get("/{goal_id}", response_model=SavingsGoalRead)
+def get_savings_goal(
+    goal_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    goal = (
+        db.query(SavingsGoal)
+        .filter(
+            SavingsGoal.id == goal_id,
+            SavingsGoal.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if goal is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Savings goal not found")
+
+    return goal

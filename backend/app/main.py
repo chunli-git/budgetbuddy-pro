@@ -1,4 +1,5 @@
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -9,6 +10,14 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.transactions import router as transactions_router
 
 app = FastAPI(title="BudgetBuddy Pro API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router)
 app.include_router(transactions_router)

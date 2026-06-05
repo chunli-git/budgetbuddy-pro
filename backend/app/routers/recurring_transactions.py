@@ -35,3 +35,16 @@ def create_recurring_transaction(
     db.refresh(recurring_transaction)
 
     return recurring_transaction
+
+
+@router.get("/", response_model=list[RecurringTransactionRead])
+def get_recurring_transactions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(RecurringTransaction)
+        .filter(RecurringTransaction.user_id == current_user.id)
+        .order_by(RecurringTransaction.created_at.desc())
+        .all()
+    )

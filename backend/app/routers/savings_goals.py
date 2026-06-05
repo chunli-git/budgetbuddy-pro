@@ -29,3 +29,16 @@ def create_savings_goal(
     db.refresh(goal)
 
     return goal
+
+
+@router.get("/", response_model=list[SavingsGoalRead])
+def get_savings_goals(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(SavingsGoal)
+        .filter(SavingsGoal.user_id == current_user.id)
+        .order_by(SavingsGoal.created_at.desc())
+        .all()
+    )

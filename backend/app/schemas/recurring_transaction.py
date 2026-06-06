@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RecurringTransactionCreate(BaseModel):
@@ -10,9 +10,10 @@ class RecurringTransactionCreate(BaseModel):
     description: str = Field(min_length=1, max_length=255)
     category: str = Field(min_length=1, max_length=100)
     transaction_type: Literal["income", "expense"]
-    frequency: Literal["daily", "weekly", "monthly", "yearly"]
+    frequency: Literal["daily", "weekly", "monthly"]
     start_date: date
     next_run_date: date
+    is_active: bool = True
 
 
 class RecurringTransactionUpdate(BaseModel):
@@ -20,7 +21,7 @@ class RecurringTransactionUpdate(BaseModel):
     description: str | None = Field(default=None, min_length=1, max_length=255)
     category: str | None = Field(default=None, min_length=1, max_length=100)
     transaction_type: Literal["income", "expense"] | None = None
-    frequency: Literal["daily", "weekly", "monthly", "yearly"] | None = None
+    frequency: Literal["daily", "weekly", "monthly"] | None = None
     start_date: date | None = None
     next_run_date: date | None = None
     is_active: bool | None = None
@@ -37,11 +38,9 @@ class RecurringTransactionRead(BaseModel):
     next_run_date: date
     is_active: bool
     created_at: datetime
-    user_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class RecurringTransactionProcessResult(BaseModel):
     created_transactions: int
-    message: str

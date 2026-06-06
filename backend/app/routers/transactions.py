@@ -1,3 +1,8 @@
+import csv
+import io
+
+from fastapi.responses import StreamingResponse
+
 from datetime import date
 from decimal import Decimal
 
@@ -57,7 +62,7 @@ def get_transactions(
         query = query.filter(
 
             or_(
-                
+
                 Transaction.description.ilike(f"%{search}%"),
                 Transaction.category.ilike(f"%{search}%"),
             )
@@ -109,7 +114,53 @@ def get_transaction_summary(
         "balance": total_income - total_expenses,
     }
 
+@router.get("/export/csv")
+def export_transactions_csv(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    transactions = (
+        db.query(Transaction)
+        .filter(Transaction.user_id == current_user.id)
+        .order_by(Transaction.transaction_date.desc())
+        .all()
+    )
 
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "id",
+        "amount",
+        "description",
+        "category",
+        "transaction_type",
+        "transaction_date",
+        "created_at",
+    ])
+
+    for transaction in transactions:
+        writer.writerow([
+            transaction.id,
+            transaction.amount,
+            transaction.description,
+            transaction.category,
+            transaction.transaction_type,
+            transaction.transaction_date,
+            transaction.created_at,
+        ])
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=transactions.csv"
+        },
+    )
+
+    
 @router.get("/{transaction_id}", response_model=TransactionRead)
 def get_transaction(
     transaction_id: int,

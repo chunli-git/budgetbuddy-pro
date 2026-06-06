@@ -29,3 +29,12 @@ class MonthlySummary(BaseModel):
     total_income: Decimal
     total_expenses: Decimal
     balance: Decimal
+
+
+class DashboardOverview(BaseModel):
+    total_transactions: int
+    total_budgets: int
+    total_savings_goals: int
+    total_recurring_transactions: int
+    total_savings_target: Decimal
+    total_savings_current: Decimal

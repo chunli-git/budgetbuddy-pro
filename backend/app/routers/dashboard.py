@@ -10,7 +10,15 @@ from app.database import get_db
 from app.models.budget import Budget
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.dashboard import BudgetHealthScore, CategoryExpense, MonthlySummary, SmartAlert
+from app.schemas.dashboard import (
+    BudgetHealthScore,
+    CategoryExpense,
+    DashboardOverview,
+    MonthlySummary,
+    SmartAlert,
+)
+from app.models.savings_goal import SavingsGoal
+from app.models.recurring_transaction import RecurringTransaction
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -252,3 +260,55 @@ def get_monthly_summary(
         }
         for month, data in monthly_data.items()
     ]
+
+@router.get("/overview", response_model=DashboardOverview)
+def get_dashboard_overview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    total_transactions = (
+        db.query(Transaction)
+        .filter(Transaction.user_id == current_user.id)
+        .count()
+    )
+
+    total_budgets = (
+        db.query(Budget)
+        .filter(Budget.user_id == current_user.id)
+        .count()
+    )
+
+    total_savings_goals = (
+        db.query(SavingsGoal)
+        .filter(SavingsGoal.user_id == current_user.id)
+        .count()
+    )
+
+    total_recurring_transactions = (
+        db.query(RecurringTransaction)
+        .filter(RecurringTransaction.user_id == current_user.id)
+        .count()
+    )
+
+    total_savings_target = (
+        db.query(func.sum(SavingsGoal.target_amount))
+        .filter(SavingsGoal.user_id == current_user.id)
+        .scalar()
+        or Decimal("0.00")
+    )
+
+    total_savings_current = (
+        db.query(func.sum(SavingsGoal.current_amount))
+        .filter(SavingsGoal.user_id == current_user.id)
+        .scalar()
+        or Decimal("0.00")
+    )
+
+    return {
+        "total_transactions": total_transactions,
+        "total_budgets": total_budgets,
+        "total_savings_goals": total_savings_goals,
+        "total_recurring_transactions": total_recurring_transactions,
+        "total_savings_target": total_savings_target,
+        "total_savings_current": total_savings_current,
+    }

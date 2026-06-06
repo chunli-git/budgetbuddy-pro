@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BudgetCreate(BaseModel):
@@ -22,16 +22,14 @@ class BudgetRead(BaseModel):
     limit_amount: Decimal
     period_month: date
     created_at: datetime
-    user_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class BudgetStatus(BaseModel):
-    budget_id: int
     category: str
     limit_amount: Decimal
     spent_amount: Decimal
     remaining_amount: Decimal
-    percentage_used: float
-    period_month: date
+    usage_percentage: float
+    status: str

@@ -4,7 +4,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-
+from app.schemas.transaction import TransactionRead
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.models.budget import Budget
@@ -312,3 +312,16 @@ def get_dashboard_overview(
         "total_savings_target": total_savings_target,
         "total_savings_current": total_savings_current,
     }
+
+@router.get("/recent-transactions", response_model=list[TransactionRead])
+def get_recent_transactions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(Transaction)
+        .filter(Transaction.user_id == current_user.id)
+        .order_by(Transaction.transaction_date.desc(), Transaction.id.desc())
+        .limit(5)
+        .all()
+    )

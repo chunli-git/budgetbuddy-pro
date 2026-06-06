@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SavingsGoalCreate(BaseModel):
@@ -25,7 +25,5 @@ class SavingsGoalRead(BaseModel):
     current_amount: Decimal
     target_date: date | None
     created_at: datetime
-    user_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

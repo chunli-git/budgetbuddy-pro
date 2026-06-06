@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TransactionCreate(BaseModel):
@@ -29,10 +29,9 @@ class TransactionRead(BaseModel):
     transaction_type: str
     transaction_date: date
     created_at: datetime
-    user_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class TransactionSummary(BaseModel):
     total_income: Decimal

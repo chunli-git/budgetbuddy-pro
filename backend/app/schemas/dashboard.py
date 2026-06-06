@@ -17,3 +17,7 @@ class SmartAlert(BaseModel):
     title: str
     message: str
     severity: str
+
+class CategoryExpense(BaseModel):
+    category: str
+    total_amount: Decimal

@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.budget import Budget
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.dashboard import BudgetHealthScore, SmartAlert
+from app.schemas.dashboard import BudgetHealthScore, CategoryExpense, SmartAlert
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -185,3 +185,30 @@ def get_smart_alerts(
             )
 
     return alerts
+
+@router.get("/expenses-by-category", response_model=list[CategoryExpense])
+def get_expenses_by_category(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    results = (
+        db.query(
+            Transaction.category,
+            func.sum(Transaction.amount).label("total_amount"),
+        )
+        .filter(
+            Transaction.user_id == current_user.id,
+            Transaction.transaction_type == "expense",
+        )
+        .group_by(Transaction.category)
+        .order_by(func.sum(Transaction.amount).desc())
+        .all()
+    )
+
+    return [
+        {
+            "category": category,
+            "total_amount": Decimal(total_amount).quantize(Decimal("0.01")),
+        }
+        for category, total_amount in results
+    ]

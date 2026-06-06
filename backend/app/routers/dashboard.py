@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.budget import Budget
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.dashboard import BudgetHealthScore, CategoryExpense, SmartAlert
+from app.schemas.dashboard import BudgetHealthScore, CategoryExpense, MonthlySummary, SmartAlert
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -211,4 +211,44 @@ def get_expenses_by_category(
             "total_amount": Decimal(total_amount).quantize(Decimal("0.01")),
         }
         for category, total_amount in results
+    ]
+
+
+@router.get("/monthly-summary", response_model=list[MonthlySummary])
+def get_monthly_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    transactions = (
+        db.query(Transaction)
+        .filter(Transaction.user_id == current_user.id)
+        .order_by(Transaction.transaction_date.asc())
+        .all()
+    )
+
+    monthly_data = {}
+
+    for transaction in transactions:
+        month_key = transaction.transaction_date.strftime("%Y-%m")
+
+        if month_key not in monthly_data:
+            monthly_data[month_key] = {
+                "total_income": Decimal("0.00"),
+                "total_expenses": Decimal("0.00"),
+            }
+
+        if transaction.transaction_type == "income":
+            monthly_data[month_key]["total_income"] += transaction.amount
+
+        if transaction.transaction_type == "expense":
+            monthly_data[month_key]["total_expenses"] += transaction.amount
+
+    return [
+        {
+            "month": month,
+            "total_income": data["total_income"].quantize(Decimal("0.01")),
+            "total_expenses": data["total_expenses"].quantize(Decimal("0.01")),
+            "balance": (data["total_income"] - data["total_expenses"]).quantize(Decimal("0.01")),
+        }
+        for month, data in monthly_data.items()
     ]

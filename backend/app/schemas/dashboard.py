@@ -18,6 +18,14 @@ class SmartAlert(BaseModel):
     message: str
     severity: str
 
+
 class CategoryExpense(BaseModel):
     category: str
     total_amount: Decimal
+
+
+class MonthlySummary(BaseModel):
+    month: str
+    total_income: Decimal
+    total_expenses: Decimal
+    balance: Decimal
